@@ -50,6 +50,7 @@ def _card_html(p: dict) -> str:
     return (
         f'<a class="card" data-c="{html.escape(p.get("company") or "")}" '
         f'data-reg="{1 if p["_reg"] else 0}" data-new="{1 if p["_new"] else 0}" '
+        f'data-launch="{html.escape(launch)}" '
         f'data-name="{name.lower()}" href="{href}" target="_blank" rel="noopener">'
         f'<div class="thumb">{img_html}</div>'
         f'<div class="body"><div class="name">{name}</div>'
@@ -125,6 +126,9 @@ button.on{{background:var(--accent);border-color:var(--accent);color:#fff}}
 <button class="sbtn on" data-s="">전체</button>
 <button class="sbtn" data-s="reg">신규등록</button>
 <button class="sbtn" data-s="new">당월출시</button>
+<span class="lbl" style="margin-left:12px">정렬</span>
+<button class="obtn on" data-o="desc">최근 출시순</button>
+<button class="obtn" data-o="asc">오래된 출시순</button>
 <input id="q" type="search" placeholder="카드명 검색"></div>
 <div class="grid" id="grid">{cards}</div>
 <div id="empty">조건에 맞는 카드가 없습니다.</div>
@@ -145,4 +149,17 @@ document.getElementById('comp').addEventListener('click',function(e){{if(e.targe
 document.querySelectorAll('.sbtn').forEach(function(b){{b.addEventListener('click',function(){{
   document.querySelectorAll('.sbtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');fs=b.dataset.s;apply();}});}});
 document.getElementById('q').addEventListener('input',function(e){{fq=e.target.value.trim().toLowerCase();apply();}});
+var fo='desc';
+function sortGrid(){{
+  var grid=document.getElementById('grid');
+  var cards=Array.prototype.slice.call(grid.children);
+  cards.sort(function(a,b){{
+    var la=a.dataset.launch||'',lb=b.dataset.launch||'';
+    if(!la&&!lb)return 0;if(!la)return 1;if(!lb)return -1;   // 출시일 없으면 뒤로
+    return fo==='desc'?lb.localeCompare(la):la.localeCompare(lb);
+  }});
+  cards.forEach(function(c){{grid.appendChild(c);}});
+}}
+document.querySelectorAll('.obtn').forEach(function(b){{b.addEventListener('click',function(){{
+  document.querySelectorAll('.obtn').forEach(x=>x.classList.remove('on'));b.classList.add('on');fo=b.dataset.o;sortGrid();apply();}});}});
 </script></body></html>"""
