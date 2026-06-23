@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block subtitle %}총 {{ total }}건 · 신규 기준 = {{ this_month }} 출시{% endblock %}
+
+{% block style %}
+  .filterbar { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 18px; align-items: center; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .filters .lbl { font-size: 12px; color: var(--muted); margin-right: 2px; }
+  .filters a {
+    text-decoration: none; color: var(--muted); font-size: 13px;
+    padding: 7px 14px; border: 1px solid var(--line); border-radius: 999px;
+    background: var(--surface); transition: all .15s;
+  }
+  .filters a:hover { color: var(--text); border-color: var(--accent); }
+  .filters a.on { color: #fff; background: var(--accent); border-color: var(--accent); }
+  .home-bar {
+    display: flex; gap: 14px; flex-wrap: wrap; margin: 0 0 18px;
+    padding: 10px 16px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); font-size: 13px;
+  }
+  .home-bar .nl { display: flex; gap: 10px; align-items: center; }
+  .home-bar strong { color: var(--text); }
+  .home-bar a { color: var(--accent); text-decoration: none; }
+  .home-bar a:hover { text-decoration: underline; }
+  .grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    overflow: hidden; display: flex; flex-direction: column;
+    transition: transform .15s, border-color .15s; color: inherit; text-decoration: none;
+  }
+  a.card { cursor: pointer; }
+  .card:hover { transform: translateY(-3px); border-color: var(--accent); }
+  .thumb {
+    aspect-ratio: 16 / 10; background: var(--surface-2);
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: contain; padding: 10px; }
+  .thumb .noimg { color: var(--muted); font-size: 12px; }
+  .body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .name { font-size: 14px; font-weight: 600; letter-spacing: -0.2px; }
+  .desc { font-size: 12px; color: var(--muted);
+          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+  .tag { font-size: 11px; padding: 2px 8px; border-radius: 6px; background: var(--surface-2); color: var(--muted); }
+  .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+  .badge.new { background: rgba(46,204,113,.15); color: var(--new); }
+  .badge.reg { background: #4c8dff; color: #fff; }
+  .empty { color: var(--muted); padding: 60px 0; text-align: center; }
+{% endblock %}
+
+{% block sidebar %}
+  <div class="nav-label">카드사</div>
+  <a class="item {{ 'on' if not filters.company else '' }}" href="/">
+    전체 <span class="cnt">{{ grand_total }}</span>
+  </a>
+  {% for c in companies %}
+    <a class="item {{ 'on' if filters.company == c['company'] else '' }}"
+       href="/?company={{ c['company'] }}">
+      {{ c['company_name'] }} <span class="cnt">{{ c['cnt'] }}</span>
+    </a>
+  {% endfor %}
+{% endblock %}
+
+{% block content %}
+  {% set f = filters %}
+  {% set comp = '&company=' ~ f.company if f.company else '' %}
+  <div class="filterbar">
+    <div class="filters">
+      <span class="lbl">상태</span>
+      <a class="{{ 'on' if not f.status else '' }}" href="/?sort={{ f.sort }}{{ comp }}">전체</a>
+      <a class="{{ 'on' if f.status == 'registered' else '' }}"
+         href="/?status=registered&sort={{ f.sort }}{{ comp }}">신규등록 (최근 {{ registered_days }}일)</a>
+      <a class="{{ 'on' if f.status == 'new' else '' }}"
+         href="/?status=new&sort={{ f.sort }}{{ comp }}">당월 출시 ({{ this_month }})</a>
+    </div>
+    <div class="filters">
+      <span class="lbl">정렬</span>
+      <a class="{{ 'on' if f.sort == 'launch_desc' else '' }}"
+         href="/?sort=launch_desc{% if f.status %}&status={{ f.status }}{% endif %}{{ comp }}">최근 출시순</a>
+      <a class="{{ 'on' if f.sort == 'launch_asc' else '' }}"
+         href="/?sort=launch_asc{% if f.status %}&status={{ f.status }}{% endif %}{{ comp }}">오래된 출시순</a>
+    </div>
+  </div>
+
+  {% if home_links %}
+  <div class="home-bar">
+    {% for n in home_links %}
+    <span class="nl">
+      <strong>{{ n.name }}</strong>
+      <a href="{{ n.home }}" target="_blank" rel="noopener">카드사 홈페이지에서 보기</a>
+    </span>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if products %}
+  <div class="grid">
+    {% for p in products %}
+    <a class="card"
+       {% if p.detail_url %}href="{{ p.detail_url }}" target="_blank" rel="noopener"{% endif %}>
+      <div class="thumb">
+        {% if p.image_path %}
+          <img src="/images/{{ p.image_path }}" alt="{{ p.name }}" loading="lazy">
+        {% elif p.image_url %}
+          <img src="{{ p.image_url }}" alt="{{ p.name }}" loading="lazy">
+        {% else %}
+          <span class="noimg">이미지 없음</span>
+        {% endif %}
+      </div>
+      <div class="body">
+        <div class="name">{{ p.name }}</div>
+        {% if p.description %}<div class="desc">{{ p.description }}</div>{% endif %}
+        <div class="meta">
+          <span class="tag">{{ p.company_name }}</span>
+          {% if p.is_new_registered %}<span class="badge reg">신규등록</span>{% endif %}
+          {% if p.is_new %}<span class="badge new">당월출시</span>{% endif %}
+          {% if p.launch_date %}<span class="tag">출시 {{ p.launch_date }}</span>{% endif %}
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">표시할 상품이 없습니다. <code>python main.py --mode collect</code> 로 먼저 수집하세요.</div>
+  {% endif %}
+{% endblock %}

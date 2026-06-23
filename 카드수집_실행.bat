@@ -1,0 +1,18 @@
+@echo off
+chcp 65001 >nul
+cd /d "%~dp0"
+
+if not exist ".venv\Scripts\python.exe" (
+    echo [오류] 먼저 설치.bat 을 실행하세요.
+    pause
+    exit /b 1
+)
+
+echo ========================================
+echo  카드사 상품 수집 시작...
+echo ========================================
+.venv\Scripts\python.exe main.py --mode collect
+
+rem 작업 스케줄러로 자동 실행할 때는 인자 auto 를 주면 창이 멈추지 않습니다.
+rem   예) 카드수집_실행.bat auto
+if /i not "%~1"=="auto" pause

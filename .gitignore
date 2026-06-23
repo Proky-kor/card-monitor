@@ -1,0 +1,14 @@
+.venv/
+dist/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+storage/*.db
+storage/*.db-*
+storage/card_images/
+# 개발용 정찰 스크립트/산출물 전체 제외
+_probe/
+# 기타 제외
+.omc/
+*.zip
