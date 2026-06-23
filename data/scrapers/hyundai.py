@@ -67,8 +67,13 @@ def scrape(known_launch: dict[str, str] | None = None) -> list[CardProduct]:
         browser = p.chromium.launch(headless=True)
         ctx = browser.new_context(user_agent=_UA, locale="ko-KR")
         page = ctx.new_page()
-        page.goto(LIST_URL, wait_until="networkidle", timeout=50000)
-        page.wait_for_timeout(3000)
+        # 현대 페이지는 추적 스크립트로 networkidle이 안 끝남 → domcontentloaded + 카드 등장 대기
+        page.goto(LIST_URL, wait_until="domcontentloaded", timeout=60000)
+        try:
+            page.wait_for_selector("a[onclick*=goCardDetail]", timeout=30000)
+        except Exception as e:
+            _log.warning("현대 카드 셀렉터 대기 실패: %s", e)
+        page.wait_for_timeout(2000)
         for _ in range(6):
             page.mouse.wheel(0, 6000)
             page.wait_for_timeout(700)

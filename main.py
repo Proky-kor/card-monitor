@@ -20,15 +20,19 @@ def run_collect() -> int:
     from services.collector import collect_all
 
     summaries = collect_all()
-    ok = True
+    failed = 0
     for s in summaries:
         if "error" in s:
-            ok = False
+            failed += 1
             print(f"[실패] {s['company']}: {s['error']}")
         else:
             print(f"[완료] {s['name']}: 수집 {s['collected']}건, "
                   f"신규등록 {s.get('new_count', 0)}건, 미노출단종 {s['discontinued']}건")
-    return 0 if ok else 1
+    succeeded = len(summaries) - failed
+    # 일부 실패는 경고만 (해당 회사 기존 데이터는 유지). 전부 실패해야 오류 종료.
+    if failed:
+        print(f"[경고] {failed}개사 수집 실패(기존 데이터 유지). 성공 {succeeded}개사.")
+    return 0 if succeeded else 1
 
 
 def run_serve() -> int:
