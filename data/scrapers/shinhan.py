@@ -12,13 +12,18 @@
 """
 
 import logging
+import re
 import time
+from dataclasses import replace
 
 import config
 from data.http import make_client, request_with_retry
 from data.models import CardProduct
 
 _log = logging.getLogger(__name__)
+# 상세 .html "부가서비스는 카드 신규출시(YYYY.MM.DD) 이후..." = 실제 출시일
+# (목록 API의 cardPdStartDate(판매시작일)와 다를 수 있어 상세를 우선)
+_LAUNCH_RE = re.compile(r"신규\s*출시\s*\(?\s*(\d{4})[.\-](\d{1,2})[.\-](\d{1,2})")
 
 COMPANY = "shinhan"
 COMPANY_NAME = "신한카드"
@@ -81,8 +86,36 @@ def _fetch_list(client, card_type: str, list_id: str) -> list[CardProduct]:
     return list(products.values())
 
 
+def _parse_launch(html: str) -> str | None:
+    """상세 HTML에서 '신규출시(YYYY.MM.DD)' → 'YYYY-MM-DD' (순수 함수)."""
+    m = _LAUNCH_RE.search(html)
+    if not m:
+        return None
+    y, mo, d = m.groups()
+    return f"{y}-{int(mo):02d}-{int(d):02d}"
+
+
+def _fetch_detail_launch(client, detail_url: str) -> str | None:
+    """상세 .html에서 실제 출시일(목록 cardPdStartDate보다 정확)."""
+    if not detail_url:
+        return None
+    try:
+        r = request_with_retry(client, "GET", detail_url)
+        r.raise_for_status()
+    except Exception as e:
+        _log.warning("신한 상세 출시일 조회 실패 %s: %s", detail_url, e)
+        return None
+    return _parse_launch(r.text)
+
+
 def scrape(known_launch: dict[str, str] | None = None) -> list[CardProduct]:
-    """신한카드 신용+체크 전체 상품 (출시일이 목록 API에 포함되어 상세조회 불필요)."""
+    """신한카드 신용+체크 전체 상품.
+
+    출시일은 목록 API의 cardPdStartDate(판매시작일)가 실제 출시일과 다를 수 있어,
+    상세 .html의 '신규출시(날짜)'를 우선 사용(없으면 cardPdStartDate 폴백).
+    출시일은 불변이라 known_launch에 있으면 상세 재조회 생략.
+    """
+    known = known_launch or {}
     results: dict[str, CardProduct] = {}
     with make_client(referer=BASE + "/") as client:
         for card_type, list_id in _LISTS:
@@ -90,4 +123,19 @@ def scrape(known_launch: dict[str, str] | None = None) -> list[CardProduct]:
             _log.info("신한카드 %s: %d건", card_type, len(items))
             for p in items:
                 results.setdefault(p.code, p)
+
+        # 출시일 보정: 모르는 카드만 상세에서 '신규출시(날짜)' 조회
+        missing = [c for c in results if c not in known]
+        if missing:
+            _log.info("신한카드 출시일 보정 대상 %d건", len(missing))
+            for code in missing:
+                p = results[code]
+                detail_launch = _fetch_detail_launch(client, p.detail_url)
+                if detail_launch:
+                    results[code] = replace(p, launch_date=detail_launch)
+                time.sleep(config.REQUEST_DELAY)
+        # 이미 아는 값은 그대로 채움
+        for code, ld in known.items():
+            if code in results and ld:
+                results[code] = replace(results[code], launch_date=ld)
     return list(results.values())

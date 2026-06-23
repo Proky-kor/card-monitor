@@ -1,6 +1,6 @@
 """신한 목록 API 아이템 → CardProduct 매핑 단위테스트 (네트워크 없음)."""
 
-from data.scrapers.shinhan import BASE, _to_product
+from data.scrapers.shinhan import BASE, _parse_launch, _to_product
 
 ITEM = {
     "cardProductEntryId": "202512230004",
@@ -27,6 +27,15 @@ def test_maps_all_fields():
 def test_missing_code_or_name_returns_none():
     assert _to_product({"cardProductEntryName": "x"}, "신용") is None
     assert _to_product({"cardProductEntryId": "1"}, "신용") is None
+
+
+def test_parse_launch_from_detail():
+    html = '<li>카드 이용 시... 부가서비스는 카드 신규출시(2026.02.04) 이후 3년...</li>'
+    assert _parse_launch(html) == "2026-02-04"
+
+
+def test_parse_launch_absent():
+    assert _parse_launch("<li>출시 정보 없음</li>") is None
 
 
 def test_no_start_date_yields_none_launch():
