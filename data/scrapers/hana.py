@@ -11,7 +11,7 @@ import json
 import logging
 import re
 
-from data.http import make_client
+from data.http import make_client, request_with_retry
 from data.models import CardProduct
 
 _log = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ def scrape(known_launch: dict[str, str] | None = None) -> list[CardProduct]:
         client.headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
         for card_type, ct in _CATEGORIES:
             try:
-                resp = client.post(API, content=_body(ct))
+                resp = request_with_retry(client, "POST", API, content=_body(ct))
                 resp.raise_for_status()
                 data = json.loads(resp.content.decode("euc-kr", "replace"))
                 cards = data.get("dataMap", {}).get("CARD_LIST", {}).get("data", [])

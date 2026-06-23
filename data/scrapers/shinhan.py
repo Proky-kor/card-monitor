@@ -15,7 +15,7 @@ import logging
 import time
 
 import config
-from data.http import make_client
+from data.http import make_client, request_with_retry
 from data.models import CardProduct
 
 _log = logging.getLogger(__name__)
@@ -64,8 +64,8 @@ def _fetch_list(client, card_type: str, list_id: str) -> list[CardProduct]:
     total_pages = 1
     page = 1
     while page <= total_pages and page <= _MAX_PAGES:
-        resp = client.get(
-            API,
+        resp = request_with_retry(
+            client, "GET", API,
             params={"pageSize": _PAGE_SIZE, "index": page, "listID": list_id},
             headers={"Origin": BASE},
         )
