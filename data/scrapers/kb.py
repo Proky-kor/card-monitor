@@ -90,8 +90,8 @@ def _collect_list(page, base_url: str) -> dict[str, str]:
     for ci in range(1, _MAX_CATE + 1):
         try:
             page.goto(f"{base_url}?pageNo=1&cateIdx={ci}",
-                      wait_until="networkidle", timeout=40000)
-            page.wait_for_timeout(1500)
+                      wait_until="domcontentloaded", timeout=60000)
+            page.wait_for_timeout(2500)
             for _ in range(4):
                 page.mouse.wheel(0, 5000)
                 page.wait_for_timeout(400)

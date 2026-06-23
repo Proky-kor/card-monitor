@@ -80,8 +80,8 @@ def scrape(known_launch: dict[str, str] | None = None) -> list[CardProduct]:
         page = browser.new_context(user_agent=_UA, locale="ko-KR").new_page()
         for card_type, url in _LISTS:
             try:
-                page.goto(url, wait_until="networkidle", timeout=50000)
-                page.wait_for_timeout(3500)
+                page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                page.wait_for_timeout(4000)
                 for _ in range(12):
                     page.mouse.wheel(0, 6000)
                     page.wait_for_timeout(500)

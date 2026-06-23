@@ -57,8 +57,9 @@ def scrape(known_launch: dict[str, str] | None = None) -> list[CardProduct]:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_context(user_agent=_UA, locale="ko-KR").new_page()
-        page.goto(HOME_URL, wait_until="networkidle", timeout=50000)  # 세션 확보
-        page.wait_for_timeout(2000)
+        # networkidle은 추적 스크립트로 안 끝남 → domcontentloaded + 대기로 세션 확보
+        page.goto(HOME_URL, wait_until="domcontentloaded", timeout=60000)
+        page.wait_for_timeout(3000)
         try:
             items = page.evaluate(_FETCH_JS)
         except Exception as e:
