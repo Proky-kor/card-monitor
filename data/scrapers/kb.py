@@ -16,7 +16,7 @@ import time
 from playwright.sync_api import sync_playwright
 
 import config
-from data.http import make_client
+from data.http import make_client, request_with_retry
 from data.models import CardProduct
 
 _log = logging.getLogger(__name__)
@@ -75,7 +75,8 @@ def _parse_launch_date(html: str) -> str | None:
 
 def _fetch_launch_date(client, code: str) -> str | None:
     try:
-        r = client.get(DETAIL_TMPL.format(code=code))
+        # 클라우드 IP에서 다건 순차 호출 시 간헐 연결 끊김 → 재시도
+        r = request_with_retry(client, "GET", DETAIL_TMPL.format(code=code))
         r.raise_for_status()
     except Exception as e:
         _log.warning("KB 출시일 조회 실패 code=%s: %s", code, e)
@@ -88,17 +89,23 @@ def _collect_list(page, base_url: str) -> dict[str, str]:
     found: dict[str, str] = {}
     empty = 0
     for ci in range(1, _MAX_CATE + 1):
-        try:
-            page.goto(f"{base_url}?pageNo=1&cateIdx={ci}",
-                      wait_until="domcontentloaded", timeout=60000)
-            page.wait_for_timeout(2500)
-            for _ in range(4):
-                page.mouse.wheel(0, 5000)
-                page.wait_for_timeout(400)
-            items = page.evaluate(_EXTRACT_JS)
-        except Exception as e:
-            _log.warning("KB 목록 실패 %s cateIdx=%d: %s", base_url[-4:], ci, e)
-            items = []
+        items = []
+        # 클라우드에서 첫 goto/렌더가 간헐 실패하면 카테고리가 통째로 0건이 되어
+        # 전체 0건 → 단종 오염으로 이어질 수 있으므로 최대 2회 재시도.
+        for attempt in range(2):
+            try:
+                page.goto(f"{base_url}?pageNo=1&cateIdx={ci}",
+                          wait_until="domcontentloaded", timeout=60000)
+                page.wait_for_timeout(2500)
+                for _ in range(4):
+                    page.mouse.wheel(0, 5000)
+                    page.wait_for_timeout(400)
+                items = page.evaluate(_EXTRACT_JS)
+                break
+            except Exception as e:
+                _log.warning("KB 목록 실패 %s cateIdx=%d (시도 %d): %s",
+                             base_url[-4:], ci, attempt + 1, e)
+                page.wait_for_timeout(1500)
         new = 0
         for it in items:
             c, n = it.get("code"), it.get("name")

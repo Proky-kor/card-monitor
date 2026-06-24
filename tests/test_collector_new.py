@@ -40,6 +40,25 @@ def test_second_run_detects_new(monkeypatch, tmp_path):
     assert [p.code for p in s["_new_products"]] == ["C"]
 
 
+def test_zero_result_does_not_discontinue(monkeypatch, tmp_path):
+    """수집 0건(클라우드 일시 실패)이면 기존 상품을 단종 처리하지 않고 보존한다."""
+    import storage.db as db
+    _setup(monkeypatch, tmp_path, [_prod("A", "A카드"), _prod("B", "B카드")])
+    collector.collect_company("fake")  # 최초 2건 저장
+    # 다음 수집이 0건 반환(파서 일시 실패 시뮬레이션)
+    monkeypatch.setattr(collector, "REGISTRY",
+                        {"fake": ("테스트카드", lambda known_launch=None: [])})
+    s = collector.collect_company("fake")
+    assert s["collected"] == 0
+    assert s["discontinued"] == 0
+    # 기존 A·B는 여전히 활성(discontinued=0) 이어야 한다
+    with db.get_conn() as conn:
+        rows = conn.execute(
+            "SELECT code, discontinued FROM card_products WHERE company='fake'"
+        ).fetchall()
+    assert {r["code"]: r["discontinued"] for r in rows} == {"A": 0, "B": 0}
+
+
 def test_collect_all_calls_notifier(monkeypatch, tmp_path):
     _setup(monkeypatch, tmp_path, [_prod("A", "A카드")])
     collector.collect_company("fake")  # 최초(신규 0)

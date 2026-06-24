@@ -106,6 +106,13 @@ def collect_company(company: str) -> dict:
             if p.code not in prior and p.code not in seen_new:
                 seen_new.add(p.code)
                 new_products.append(p)
+    # 수집 0건은 (사이트 개편이 아니라) 클라우드 일시 실패일 가능성이 크다.
+    # 이 상태로 mark_discontinued를 부르면 seen=∅ → 해당 회사 전체가 단종 처리되는
+    # 데이터 오염이 발생하므로, 0건이면 단종 마킹을 건너뛰고 실패로 본다.
+    if not products:
+        _log.warning("[%s] 수집 0건 → 단종 마킹 건너뜀(일시 실패로 간주, 기존 데이터 보존)", name)
+        return {"company": company, "name": name, "collected": 0,
+                "discontinued": 0, "new_count": 0, "_new_products": []}
     seen: set[str] = set()
     with db.get_conn() as conn, make_client(referer=None) as img_client:
         for p in products:
