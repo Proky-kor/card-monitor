@@ -22,6 +22,8 @@ BASE = "https://www.hanacard.co.kr"
 API = BASE + "/OPI31000000D.ajax"
 LIST_PAGE = BASE + "/OPI31000000D.web?schID=pcd&mID=OPI31000005P&CT_ID={ct}"
 HOME_URL = LIST_PAGE.format(ct="241704030444153")
+# 카드별 상세페이지(자세히보기 랜딩). 응답 item의 CD_ID(상품 고유 ID)로 직접 이동.
+DETAIL_PAGE = BASE + "/OPI41000000D.web?CD_ID={cd_id}&schID=pcd&mID=OPI41000000C"
 
 # (카드구분, CT_ID)
 _CATEGORIES = [
@@ -59,10 +61,12 @@ def scrape(known_launch: dict[str, str] | None = None) -> list[CardProduct]:
                 img = it.get("LIST_IMG_TYPE_IMG") or ""
                 image_url = (BASE + img) if img.startswith("/") else (img or None)
                 desc = _TAG_RE.sub(" ", it.get("CD_DESC_TXT") or "").strip() or None
+                cd_id = (it.get("CD_ID") or "").strip()
+                detail = DETAIL_PAGE.format(cd_id=cd_id) if cd_id else LIST_PAGE.format(ct=ct)
                 by_code[code] = CardProduct(
                     company=COMPANY, company_name=COMPANY_NAME, code=code, name=name,
                     card_type=card_type, image_url=image_url,
-                    detail_url=LIST_PAGE.format(ct=ct),
+                    detail_url=detail,
                     launch_date=None, description=desc,
                 )
     _log.info("하나카드 합계 %d건", len(by_code))
