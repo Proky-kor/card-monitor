@@ -28,6 +28,8 @@ LIST_PAGE = BASE + "/dcpc/yh1/crd/crd02/H1CRD202S00.do?ctgrCd={ctgr}&hiPrdCtgrCd
 API_PATH = "/dcpc/yh1/crd/crd02/searchCrd02List.pwkjson"
 DETAIL_PATH = "/dcpc/yh1/crd/crd01/searchCrdDtl.pwkjson"
 HOME_URL = BASE + "/dcpc/yh1/crd/crd02/H1CRD202S00.do?ctgrCd=S000017&hiPrdCtgrCd=M110018"
+# 카드별 상세페이지(자세히보기 랜딩). cdPrdCd로 해당 상품 상세로 직접 이동.
+DETAIL_PAGE = BASE + "/dcpc/yh1/crd/crd01/H1CRD101S02.do?cdPrdCd={code}"
 _UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
        "(KHTML, like Gecko) Chrome/120.0 Safari/537.36")
 
@@ -146,7 +148,8 @@ def scrape(known_launch: dict[str, str] | None = None) -> list[CardProduct]:
             enriched += 1
         out.append(CardProduct(
             company=COMPANY, company_name=COMPANY_NAME, code=code, name=d["name"],
-            card_type=d["card_type"], image_url=d["image_url"], detail_url=HOME_URL,
+            card_type=d["card_type"], image_url=d["image_url"],
+            detail_url=DETAIL_PAGE.format(code=code),
             launch_date=launch, description=d["desc"],
         ))
     _log.info("우리카드 합계 %d건 (상세 출시일 보정 %d건)", len(out), enriched)
