@@ -13,6 +13,10 @@ echo  카드사 상품 수집 시작...
 echo ========================================
 .venv\Scripts\python.exe main.py --mode collect
 
+echo.
+echo  정적 대시보드 갱신(dist/index.html)...
+.venv\Scripts\python.exe main.py --mode export
+
 rem 작업 스케줄러로 자동 실행할 때는 인자 auto 를 주면 창이 멈추지 않습니다.
 rem   예) 카드수집_실행.bat auto
 if /i not "%~1"=="auto" pause
