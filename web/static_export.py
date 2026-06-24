@@ -95,6 +95,9 @@ def export_static(out_dir: str = "dist") -> str:
 
 _TEMPLATE = """<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>카드사 신규 상품 모니터링</title>
 <style>
 :root{{--bg:#0f1115;--surface:#181b22;--surface2:#20242e;--line:#2b3140;--text:#e7eaf0;--muted:#9aa3b2;--accent:#4c8dff;--new:#2ecc71;}}
