@@ -1,11 +1,13 @@
 name: 카드 모니터링 (자동 수집 + Teams 알림 + Pages)
 
-# 매일 약 09:25 KST(00:25 UTC) 자동 실행 + 수동 실행 버튼(Actions 탭)
+# 자동 실행 + 수동 실행 버튼(Actions 탭).
 # 주의: 정각(특히 00:00 UTC)은 전 세계 cron이 몰려 GitHub가 best-effort로
 # 지연·드롭하는 가장 혼잡한 슬롯이라, 정각을 피해 25분으로 둔다.
+# GitHub cron 은 단일 슬롯이 통째로 드롭/수 시간 지연되는 일이 잦아 하루 3회로 분산한다.
+# first_seen(cards.db) 중복방지로 재실행은 멱등 — 같은 카드에 Teams 알림이 중복 발송되지 않는다.
 on:
   schedule:
-    - cron: "25 0 * * *"
+    - cron: "25 0,4,8 * * *"   # 09:25 / 13:25 / 17:25 KST = 드롭 대비 하루 3회 시도
   workflow_dispatch:
   # main 푸시 시에도 실행하되, 수집(스크래핑)은 건너뛰고 커밋된 cards.db로
   # export+배포만 수행 → 코드/데이터 수정이 즉시 라이브 대시보드에 반영된다.
